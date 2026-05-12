@@ -1,23 +1,37 @@
-from src.utils.retry import groq_retry
+from src.transcription.youtube_downloader import YouTubeDownloader
 
 
-counter = 0
+# Example YouTube URL
+url = "https://youtu.be/dQw4w9WgXcQ"
 
 
-@groq_retry
-def fake_api_call():
-    global counter
+print("\n--- TEST 1: URL VALIDATION ---")
 
-    counter += 1
+is_valid = YouTubeDownloader.is_valid_youtube_url(url)
 
-    print(f"Attempt {counter}")
-
-    if counter < 3:
-        raise Exception("Temporary API failure")
-
-    return "Success!"
+print("Valid URL:", is_valid)
 
 
-result = fake_api_call()
+print("\n--- TEST 2: DOWNLOAD AUDIO ---")
 
-print(result)
+downloader = YouTubeDownloader()
+
+with downloader.download(url) as result:
+
+    print("\n✅ DOWNLOAD SUCCESSFUL")
+
+    print("Title:", result.title)
+    print("Duration:", result.duration_seconds)
+    print("Path:", result.path)
+
+    print("\nChecking if file exists...")
+    print(result.path.exists())
+
+    print("\nFile size:")
+    print(result.path.stat().st_size, "bytes")
+
+
+print("\n--- TEST 3: CLEANUP CHECK ---")
+
+print("File exists after context manager?")
+print(result.path.exists())
