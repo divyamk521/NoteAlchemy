@@ -1,0 +1,21 @@
+Introduction to Neural Networks
+
+Overview of neural networks and deep learning.
+
+Key Concepts
+
+- Neural Networks
+- Backpropagation
+
+Forward Propagation
+
+Activation Functions
+
+ReLU is a commonly used activation function.
+
+x = max(0, x)
+
+Glossary
+
+ReLU  
+Rectified Linear Unit activation function.
