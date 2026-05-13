@@ -1,0 +1,13 @@
+[theme]
+base = "dark"
+primaryColor = "#c9933a"
+backgroundColor = "#13120f"
+secondaryBackgroundColor = "#1a1815"
+textColor = "#e8e0d0"
+font = "serif"
+
+[server]
+maxUploadSize = 200
+
+[browser]
+gatherUsageStats = false #i am not sending stats to streamlit
