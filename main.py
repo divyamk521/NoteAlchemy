@@ -25,25 +25,21 @@ from src.transcription import WhisperClient, YouTubeDownloader
 from src.notes import NotesGenerator
 from src.utils import FileSizeError, UnsupportedFormatError
 
-# ──────────────────────────────────────────────────────────────────────
-#  One-time setup
-# ──────────────────────────────────────────────────────────────────────
+
 
 setup_logger()
 logger = get_logger(__name__)
 settings = get_settings()
 
 st.set_page_config(
-    page_title="ScribeWizard",
+    page_title="NoteAlchemy",
     page_icon="🧙",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 st.markdown(get_css(), unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────────────────────────────
-#  Session-state defaults
-# ──────────────────────────────────────────────────────────────────────
+
 
 _DEFAULTS = {
     "api_key":          settings.groq_api_key,
@@ -57,17 +53,13 @@ for key, default in _DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = default
 
-# ──────────────────────────────────────────────────────────────────────
-#  Sidebar
-# ──────────────────────────────────────────────────────────────────────
+
 
 opts = render_sidebar()
 
-# ──────────────────────────────────────────────────────────────────────
-#  Header
-# ──────────────────────────────────────────────────────────────────────
 
-st.markdown("# 🧙 ScribeWizard")
+
+st.markdown("# 🧙 NoteAlchemy")
 st.markdown(
     "<p style='color:#6a6258;margin-top:-0.8rem;"
     "font-family:JetBrains Mono,monospace;font-size:0.82rem;'>"
@@ -76,9 +68,7 @@ st.markdown(
 )
 st.divider()
 
-# ──────────────────────────────────────────────────────────────────────
-#  Step 1 — Input
-# ──────────────────────────────────────────────────────────────────────
+
 
 input_col, hint_col = st.columns([3, 1])
 
@@ -107,9 +97,7 @@ with hint_col:
     with st.expander("📁 Supported formats"):
         st.markdown("MP3 · MP4 · WAV · FLAC · M4A · WEBM · OGG (max 25 MB)")
 
-# ──────────────────────────────────────────────────────────────────────
-#  Step 2 — Generate
-# ──────────────────────────────────────────────────────────────────────
+
 
 st.markdown("### Step 2 — Generate Notes")
 generate_btn = st.button("✨ Generate Notes", type="primary")
@@ -121,12 +109,12 @@ if generate_btn:
     st.session_state["stats"]           = None
     st.session_state["error_message"]   = ""
 
-    # ── Validate API key ──────────────────────────────────────────────
+
     if not opts["api_key"]:
         st.error("❌ Please enter your Groq API key in the sidebar.")
         st.stop()
 
-    # ── Build Groq client ─────────────────────────────────────────────
+    
     try:
         groq_client = build_client(opts["api_key"])
     except GroqClientError as exc:
@@ -140,7 +128,7 @@ if generate_btn:
     status_text  = st.empty()
 
     try:
-        # ── Transcription ─────────────────────────────────────────────
+
         transcript: str = ""
 
         if opts["input_mode"] == "audio" and uploaded_file is not None:
@@ -190,7 +178,7 @@ if generate_btn:
 
         callback = make_progress_callback(progress_bar, status_text)
 
-        # Offset progress by 20 (transcription used 0-20)
+       
         def offset_callback(current, total, message):
             pct = 20 + int(75 * current / max(total, 1))
             progress_bar.progress(pct, text=message)
