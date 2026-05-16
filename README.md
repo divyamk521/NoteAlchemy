@@ -112,14 +112,14 @@ USER INPUT
           │  NOTES GENERATOR           │
           │  NotesGenerator.generate() │
           │    │                       │
-          │    ├─ _build_structure()   │  ← Llama 4 Maverick (quality)
+          │    ├─ _build_structure()   │  ← Llama 3.3 versatile (quality)
           │    │    LLM JSON → Pydantic│
           │    │    NotesStructure     │
           │    │                       │
-          │    ├─ _build_section_      │  ← Llama 4 Scout × N sections
+          │    ├─ _build_section_      │  ← Llama 3.1 instant × N sections
           │    │   content() × N       │    (speed)
           │    │                       │
-          │    └─ _build_glossary()    │  ← Llama 4 Scout (optional)
+          │    └─ _build_glossary()    │  ← Llama 3.1 instant (optional)
           │                            │
           │  returns: LectureNotes     │
           └─────────────┬──────────────┘
@@ -156,7 +156,7 @@ USER INPUT
 ### Step 1 — Clone / extract the project
 
 ```bash
-cd scribewizard
+cd NoteAlchemy
 ```
 
 ### Step 2 — Create a virtual environment
@@ -213,8 +213,8 @@ All settings live in `.env` (see `.env.example`):
 |---|---|---|
 | `GROQ_API_KEY` | *(required)* | Your Groq Cloud API key |
 | `WHISPER_MODEL` | `whisper-large-v3` | Transcription model |
-| `STRUCTURE_MODEL` | `meta-llama/llama-4-maverick-17b-128e-instruct` | Outline quality model |
-| `CONTENT_MODEL` | `meta-llama/llama-4-scout-17b-16e-instruct` | Content speed model |
+| `STRUCTURE_MODEL` | `llama-3.3-70b-versatile` | Outline quality model |
+| `CONTENT_MODEL` | `llama-3.1-8b-instant` | Content speed model |
 | `MAX_FILE_SIZE_MB` | `25` | Max audio upload size |
 | `MAX_RETRIES` | `3` | API retry attempts |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
@@ -263,7 +263,7 @@ PRs are welcome! Please keep the separation of concerns:
 - Initial release
 - Audio upload + YouTube URL + paste transcript inputs
 - Whisper-large-v3 transcription
-- Scaffolded Maverick (outline) + Scout (content) generation
+- Scaffolded llama-3.3-70b-versatile (outline) + llama-3.1-8b-instant (content) generation
 - Glossary generation
 - PDF + TXT export
 - Modular architecture with separation of concerns
