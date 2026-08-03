@@ -266,10 +266,16 @@ def render_notes(notes: LectureNotes, stats: GenerationStats) -> None:
     )
 
     with tab_notes:
-        st.markdown(
-            f"<div class='notes-container'>{notes.markdown}</div>",
-            unsafe_allow_html=True,
-        )
+        # Render as markdown, NOT as raw HTML. notes.markdown is model
+        # output derived from user-supplied transcript text, so
+        # interpolating it into a <div> with unsafe_allow_html=True let a
+        # crafted transcript inject script or event-handler attributes —
+        # a stored-XSS vector as soon as notes are shared between users.
+        # Passing it to st.markdown() also means headings, tables and
+        # code fences are parsed properly instead of the first line being
+        # swallowed as an HTML block.
+        with st.container(key="notes_container"):
+            st.markdown(notes.markdown)
 
     with tab_transcript:
         transcript = st.session_state.get("transcript", "")

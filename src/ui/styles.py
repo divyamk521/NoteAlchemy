@@ -164,7 +164,7 @@ h2, h3 {{
 }}
 
 /* ── Notes container ────────────────────────────────────────────── */
-.notes-container {{
+.st-key-notes_container {{
     background: #1a1815;
     border: 1px solid #2e2b27;
     border-radius: 8px;
@@ -173,24 +173,24 @@ h2, h3 {{
     color: #ddd5c0;
     font-size: 0.96rem;
 }}
-.notes-container h1 {{
+.st-key-notes_container h1 {{
     font-size: 1.7rem;
     border-bottom: 1px solid #3a3630;
     padding-bottom: 0.5rem;
     margin-bottom: 1.2rem;
 }}
-.notes-container h2 {{
+.st-key-notes_container h2 {{
     font-size: 1.25rem;
     color: #e8d8a8;
     margin-top: 2rem;
     margin-bottom: 0.6rem;
 }}
-.notes-container h3 {{
+.st-key-notes_container h3 {{
     font-size: 1.05rem;
     color: #c9b898;
     margin-top: 1.2rem;
 }}
-.notes-container code {{
+.st-key-notes_container code {{
     font-family: 'JetBrains Mono', monospace;
     background: #0f0e0d;
     padding: 2px 6px;
@@ -198,7 +198,7 @@ h2, h3 {{
     font-size: 0.82em;
     color: #d4a84e;
 }}
-.notes-container pre code {{
+.st-key-notes_container pre code {{
     display: block;
     padding: 1rem 1.2rem;
     overflow-x: auto;
@@ -206,20 +206,20 @@ h2, h3 {{
     border-left: 3px solid #c9933a;
     border-radius: 0 4px 4px 0;
 }}
-.notes-container blockquote {{
+.st-key-notes_container blockquote {{
     border-left: 3px solid #c9933a;
     padding-left: 1rem;
     color: #9a8f7e;
     font-style: italic;
     margin: 1rem 0;
 }}
-.notes-container table {{
+.st-key-notes_container table {{
     width: 100%;
     border-collapse: collapse;
     margin: 1rem 0;
     font-size: 0.88rem;
 }}
-.notes-container th {{
+.st-key-notes_container th {{
     background: #242118;
     color: #c9933a;
     padding: 0.5rem 0.8rem;
@@ -230,12 +230,12 @@ h2, h3 {{
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }}
-.notes-container td {{
+.st-key-notes_container td {{
     padding: 0.45rem 0.8rem;
     border: 1px solid #2e2b27;
     vertical-align: top;
 }}
-.notes-container tr:nth-child(even) td {{
+.st-key-notes_container tr:nth-child(even) td {{
     background: #161410;
 }}
 
