@@ -9,7 +9,7 @@ from groq import Groq
 
 from config.settings import get_settings
 from src.utils.logger import get_logger
-from src.utils.retry import groq_retry
+from src.utils.retry import TRANSIENT_ERRORS, groq_retry
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -65,6 +65,11 @@ class LLMClient:
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+        except TRANSIENT_ERRORS:
+            # Let these through untouched so @groq_retry can act on them.
+            # Wrapping them in CompletionError here would hide them from
+            # the retry predicate and disable retries entirely.
+            raise
         except Exception as exc:
             raise CompletionError(
                 f"Groq completion failed (model={model}): {exc}"
