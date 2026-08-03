@@ -185,7 +185,14 @@ def render_text_input() -> Optional[str]:
     )
     if text.strip():
         word_count = len(text.split())
-        st.caption(f"📝 {word_count:,} words pasted")
+        limit = settings.max_transcript_words
+        if word_count > limit:
+            st.error(
+                f"📝 {word_count:,} words — over the {limit:,} word limit. "
+                "Split the lecture into shorter parts."
+            )
+        else:
+            st.caption(f"📝 {word_count:,} words pasted")
         return text.strip()
     return None
 

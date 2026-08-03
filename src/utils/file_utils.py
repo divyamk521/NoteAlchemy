@@ -22,6 +22,35 @@ class FileSizeError(ValueError):
 class UnsupportedFormatError(ValueError):
     """Raised when a file extension is not in the supported audio formats."""
 
+class TranscriptTooLongError(ValueError):
+    """Raised when a transcript exceeds the configured word limit."""
+
+class EmptyTranscriptError(ValueError):
+    """Raised when there is no usable text to generate notes from."""
+
+
+def validate_transcript(text: str) -> str:
+    """Return *text* stripped, or raise if it cannot be processed.
+
+    An unbounded paste is sent to the structure model and then once per
+    section, so a very large input stalls the run and can exceed the
+    model's context window with no useful error. Reject it up front.
+    """
+    stripped = (text or "").strip()
+    if not stripped:
+        raise EmptyTranscriptError(
+            "Transcript is empty — nothing to generate notes from."
+        )
+
+    words = len(stripped.split())
+    if words > settings.max_transcript_words:
+        raise TranscriptTooLongError(
+            f"Transcript is {words:,} words — exceeds the "
+            f"{settings.max_transcript_words:,} word limit. "
+            "Split the lecture into shorter parts."
+        )
+    return stripped
+
 def validate_audio_file(filename: str, size_bytes: int) -> None:
     
     ext = Path(filename).suffix.lower()

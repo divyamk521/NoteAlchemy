@@ -20,10 +20,16 @@ from src.ui import (
     render_welcome,
     make_progress_callback,
 )
-from src.llm import build_client, GroqClientError, LLMClient
+from src.llm import build_client, verify_client, GroqClientError, LLMClient
 from src.transcription import WhisperClient, YouTubeDownloader
 from src.notes import NotesGenerator
-from src.utils import FileSizeError, UnsupportedFormatError
+from src.utils import (
+    FileSizeError,
+    UnsupportedFormatError,
+    TranscriptTooLongError,
+    EmptyTranscriptError,
+    validate_transcript,
+)
 
 
 
@@ -117,6 +123,13 @@ if generate_btn:
     
     try:
         groq_client = build_client(opts["api_key"])
+        # Probe the key once per session. Groq(api_key=...) does no I/O, so
+        # without this a wrong key only surfaces mid-pipeline, after the
+        # user has already waited through transcription.
+        if st.session_state.get("verified_key") != opts["api_key"]:
+            with st.spinner("Checking API key…"):
+                verify_client(groq_client)
+            st.session_state["verified_key"] = opts["api_key"]
     except GroqClientError as exc:
         st.error(f"❌ {exc}")
         st.stop()
@@ -167,10 +180,7 @@ if generate_btn:
             st.error("❌ Please provide audio, a YouTube URL, or a transcript.")
             st.stop()
 
-        if not transcript.strip():
-            st.error("❌ Transcript is empty — nothing to generate notes from.")
-            st.stop()
-
+        transcript = validate_transcript(transcript)
         st.session_state["transcript"] = transcript
 
         # ── Notes generation ──────────────────────────────────────────
@@ -204,6 +214,9 @@ if generate_btn:
 
     except (FileSizeError, UnsupportedFormatError) as exc:
         st.error(f"❌ File error: {exc}")
+        logger.warning(str(exc))
+    except (TranscriptTooLongError, EmptyTranscriptError) as exc:
+        st.error(f"❌ {exc}")
         logger.warning(str(exc))
     except GroqClientError as exc:
         st.error(f"❌ Groq error: {exc}")

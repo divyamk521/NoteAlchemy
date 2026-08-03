@@ -7,7 +7,10 @@ textColor = "#e8e0d0"
 font = "serif"
 
 [server]
-maxUploadSize = 200
+# Must match MAX_FILE_SIZE_MB in config/settings.py (Groq's audio cap).
+# When this was 200, the UI accepted a 180 MB file, uploaded all of it,
+# then rejected it at validation — wasting the user's time and bandwidth.
+maxUploadSize = 25
 
 [browser]
 gatherUsageStats = false #i am not sending stats to streamlit
