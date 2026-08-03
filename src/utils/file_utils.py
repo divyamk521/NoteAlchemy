@@ -1,7 +1,6 @@
 
-import os
 import tempfile
-import shutil
+import uuid
 from pathlib import Path
 from contextlib import contextmanager
 from typing import Generator, Optional
@@ -43,12 +42,19 @@ def temp_audio_file(
     filename: str,
     suffix: Optional[str] = None,
 ) -> Generator[Path, None, None]:
-   #creating a directory for temporary files
+    """Write *data* to a private temp file and yield its path.
+
+    The name is unique per call. Streamlit serves every concurrent
+    session from a single process, so a name derived only from the PID
+    would collide across users: two simultaneous uploads would share one
+    path, and whichever finished first would delete the file the other
+    was still reading.
+    """
     ext = suffix or Path(filename).suffix or ".mp3"
     tmp_dir = Path(tempfile.gettempdir()) / "notealchemy"
     tmp_dir.mkdir(parents=True, exist_ok=True)
-    #creating temporary file  with a unique name using os->pid
-    tmp_path = tmp_dir / f"sw_upload_{os.getpid()}{ext}"
+    # uuid4 per call — never reuse a name across sessions or threads
+    tmp_path = tmp_dir / f"upload_{uuid.uuid4().hex}{ext}"
     try:
         tmp_path.write_bytes(data)
         logger.debug(f"Temp audio written: {tmp_path} ({len(data)/1024:.1f} kB)")

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
+import shutil
 import tempfile
+import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,9 +42,16 @@ class YouTubeDownloader:
 
     @contextmanager
     def download(self, url: str) -> Generator[DownloadResult, None, None]:
-       
-       
-        output_template = str(self._tmp_dir / "%(id)s.%(ext)s")
+        """Download *url*'s audio track, yield it, then always clean up.
+
+        The output path is namespaced by a per-call uuid rather than the
+        video id alone: two users fetching the same video concurrently
+        would otherwise share one path, and the first to finish would
+        delete the file the second was still transcribing.
+        """
+        call_dir = self._tmp_dir / uuid.uuid4().hex
+        ensure_dir(call_dir)
+        output_template = str(call_dir / "%(id)s.%(ext)s")
         info: dict = {}
 
         ydl_opts = {
@@ -65,7 +73,7 @@ class YouTubeDownloader:
                 info = meta or {}
                 video_id = info.get("id", "unknown")
                 ext = info.get("ext", settings.ytdlp_audio_format)
-                downloaded_path = self._tmp_dir / f"{video_id}.{ext}"
+                downloaded_path = call_dir / f"{video_id}.{ext}"
 
                 logger.success(
                     f"Downloaded '{info.get('title', 'unknown')}' "
@@ -81,9 +89,11 @@ class YouTubeDownloader:
             yield result
 
         finally:
-            if downloaded_path and downloaded_path.exists():
-                downloaded_path.unlink()
-                logger.debug(f"Removed downloaded audio: {downloaded_path}")
+            # Remove the whole per-call directory: yt-dlp may leave
+            # partial or differently-named files behind on failure.
+            if call_dir.exists():
+                shutil.rmtree(call_dir, ignore_errors=True)
+                logger.debug(f"Removed download dir: {call_dir}")
 
     
     @staticmethod
