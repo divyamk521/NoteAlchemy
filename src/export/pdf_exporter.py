@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from fpdf import FPDF
+from src.export.fonts import resolve_font_set, sanitize_for_font
 from src.notes.models import LectureNotes
 
 
@@ -39,6 +40,18 @@ class _NoteAlchemy(FPDF):
         super().__init__(orientation="P", unit="mm", format="A4")
         self.set_margins(self.MARGIN, self.MARGIN, self.MARGIN)
         self.set_auto_page_break(auto=True, margin=self.MARGIN)
+
+        # Resolve and register fonts before the first page: header() runs
+        # on add_page() and needs a usable family.
+        self._font_set = resolve_font_set()
+        self._family = self._font_set.family
+        self._mono = self._font_set.mono_family
+        for style, path in self._font_set.faces:
+            family = (
+                self._mono if path.stem.endswith("Mono") else self._family
+            )
+            self.add_font(family=family, style=style, fname=str(path))
+
         self.add_page()
         self._in_code_block = False
 
@@ -46,7 +59,7 @@ class _NoteAlchemy(FPDF):
     def header(self) -> None:
         if self.page_no() == 1:
             return
-        self.set_font("Helvetica", "I", 8)
+        self.set_font(self._family, "I", 8)
         self.set_text_color(*self.C_RULE)
         self.cell(0, 6, "NoteAlchemy — Lecture Notes", align="L")
         self.set_text_color(*self.C_BODY)
@@ -54,13 +67,20 @@ class _NoteAlchemy(FPDF):
 
     def footer(self) -> None:
         self.set_y(-12)
-        self.set_font("Helvetica", "", 8)
+        self.set_font(self._family, "", 8)
         self.set_text_color(*self.C_RULE)
         self.cell(0, 5, f"Page {self.page_no()}", align="C")
 
     # ── Main renderer ─────────────────────────────────────────────────
     def render_markdown(self, markdown: str) -> None:
-        """Parse *markdown* line by line and render to PDF."""
+        """Parse *markdown* line by line and render to PDF.
+
+        Text is sanitised once up front so every downstream path —
+        headings, body, code lines, table cells — is safe for the
+        resolved font. Without this, an em dash or curly quote in model
+        output raises FPDFUnicodeEncodingException mid-render.
+        """
+        markdown = sanitize_for_font(markdown, self._font_set)
         for raw in markdown.splitlines():
             line = raw.rstrip()
 
@@ -82,7 +102,7 @@ class _NoteAlchemy(FPDF):
             self._render_normal_line(line)
 
     def _render_code_line(self, line: str) -> None:
-        self.set_font("Courier", "", 8)
+        self.set_font(self._mono, "", 8)
         self.set_text_color(*self.C_BODY)
         display = line if line else " "
         self.set_x(self.MARGIN + 4)
@@ -129,7 +149,7 @@ class _NoteAlchemy(FPDF):
     # ── Element renderers ────────────────────────────────────────────
     def _h1(self, text: str) -> None:
         self.ln(5)
-        self.set_font("Helvetica", "B", 18)
+        self.set_font(self._family, "B", 18)
         self.set_text_color(*self.C_HEADING1)
         self.multi_cell(0, 9, _strip_inline(text), align="L")
         # Underline rule
@@ -143,7 +163,7 @@ class _NoteAlchemy(FPDF):
 
     def _h2(self, text: str) -> None:
         self.ln(4)
-        self.set_font("Helvetica", "B", 14)
+        self.set_font(self._family, "B", 14)
         self.set_text_color(*self.C_HEADING2)
         self.multi_cell(0, 7, _strip_inline(text), align="L")
         self.ln(2)
@@ -151,14 +171,14 @@ class _NoteAlchemy(FPDF):
 
     def _h3(self, text: str) -> None:
         self.ln(3)
-        self.set_font("Helvetica", "BI", 11)
+        self.set_font(self._family, "BI", 11)
         self.set_text_color(*self.C_HEADING3)
         self.multi_cell(0, 6, _strip_inline(text), align="L")
         self.ln(1)
         self._reset_text()
 
     def _blockquote(self, text: str) -> None:
-        self.set_font("Helvetica", "I", 10)
+        self.set_font(self._family, "I", 10)
         self.set_text_color(*self.C_BLOCKQUOTE)
         self.set_x(self.MARGIN + 6)
         self.multi_cell(self.CONTENT_W - 6, 5.5, _strip_inline(text), align="L")
@@ -191,7 +211,7 @@ class _NoteAlchemy(FPDF):
         if not any(cells):
             return
         col_w = self.CONTENT_W / max(len(cells), 1)
-        self.set_font("Helvetica", "", 8)
+        self.set_font(self._family, "", 8)
         self.set_text_color(*self.C_BODY)
         for cell in cells:
             self.cell(col_w, 5.5, _strip_inline(cell)[:50], border=1, align="C")
@@ -206,7 +226,7 @@ class _NoteAlchemy(FPDF):
         self.ln(3)
 
     def _reset_text(self) -> None:
-        self.set_font("Helvetica", "", 10)
+        self.set_font(self._family, "", 10)
         self.set_text_color(*self.C_BODY)
         self.set_x(self.MARGIN)
 
