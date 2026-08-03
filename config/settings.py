@@ -41,6 +41,20 @@ class Settings(BaseSettings):
     max_retries: int = Field(default=3, ge=1, le=10)
     retry_delay_seconds: float = Field(default=2.0, ge=0.0)
 
+    # Sections are independent LLM calls, so they run concurrently.
+    # Keep this modest: Groq's free tier allows 30 requests/minute and the
+    # limit is enforced per organisation, not per API key.
+    max_concurrent_sections: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="How many section-content calls may be in flight at once",
+    )
+
+    # Guard against a pasted transcript large enough to blow the context
+    # window or stall a run. ~120k words is far beyond any real lecture.
+    max_transcript_words: int = Field(default=120_000, ge=100)
+
     log_level: str = Field(default="INFO")
 
     #download youtube audio

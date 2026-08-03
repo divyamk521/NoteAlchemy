@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
@@ -26,23 +28,38 @@ ProgressCallback = Callable[[int, int, str], None]
 
 @dataclass
 class GenerationStats:
-    """Timing and token metadata collected during generation."""
+    """Timing metadata collected during generation.
+
+    ``content_times`` holds each section's own duration. Because sections
+    run concurrently, their sum is *not* elapsed time — ``sections_wall_time``
+    is the real cost of that phase, and ``total_time`` is built from it.
+    """
 
     structure_time: float = 0.0
     content_times: list[float] = field(default_factory=list)
+    sections_wall_time: float = 0.0
     glossary_time: float = 0.0
     total_sections: int = 0
 
     @property
     def total_time(self) -> float:
-        return self.structure_time + sum(self.content_times) + self.glossary_time
+        """Wall-clock time for the whole pipeline."""
+        return self.structure_time + self.sections_wall_time + self.glossary_time
 
     @property
     def avg_section_time(self) -> float:
         if not self.content_times:
             return 0.0
         return sum(self.content_times) / len(self.content_times)
-    
+
+    @property
+    def sections_speedup(self) -> float:
+        """How much concurrency saved on the section phase (1.0 = none)."""
+        if not self.sections_wall_time:
+            return 1.0
+        return sum(self.content_times) / self.sections_wall_time
+
+
 class NotesGenerator:
     """
     Generates :class:`~src.notes.models.LectureNotes` from a transcript.
@@ -88,8 +105,6 @@ class NotesGenerator:
         ValidationError
             If the LLM returns structurally invalid JSON.
         """
-        import time
-
         stats = GenerationStats()
 
         # ── Step 1: Generate structure ────────────────────────────────
@@ -109,20 +124,13 @@ class NotesGenerator:
         # Update total steps now we know section count
         total_steps = 1 + len(structure.sections) + (1 if self._generate_glossary else 0)
 
-        # ── Step 2: Generate section content ─────────────────────────
-        section_contents: list[SectionContent] = []
-        for i, section in enumerate(structure.sections):
-            step_num = i + 2
-            self._on_progress(
-                step_num,
-                total_steps,
-                f"Writing section {i + 1}/{len(structure.sections)}: {section.heading}",
-            )
-            t0 = time.perf_counter()
-            content = self._build_section_content(transcript, structure, section)
-            stats.content_times.append(time.perf_counter() - t0)
-            section_contents.append(SectionContent(section=section, content=content))
-            logger.debug(f"Section '{section.heading}' written ({len(content)} chars)")
+        # ── Step 2: Generate section content (concurrently) ───────────
+        # Each section depends only on (transcript, structure, section),
+        # so they are independent calls. Running them one at a time made
+        # the section phase N times slower than its critical path.
+        section_contents = self._build_all_sections(
+            transcript, structure, stats, total_steps
+        )
 
         # ── Step 3: Glossary (optional) ───────────────────────────────
         glossary: list[GlossaryEntry] = []
@@ -147,6 +155,87 @@ class NotesGenerator:
     # ------------------------------------------------------------------ #
     #  Private helpers — each maps to one LLM call
     # ------------------------------------------------------------------ #
+
+    def _build_all_sections(
+        self,
+        transcript: str,
+        structure: NotesStructure,
+        stats: GenerationStats,
+        total_steps: int,
+    ) -> list[SectionContent]:
+        """Generate every section's content concurrently, preserving order.
+
+        Futures are submitted here and drained with ``as_completed`` on the
+        *calling* thread, so ``self._on_progress`` never fires from a worker.
+        That matters because the Streamlit callback touches widgets, which
+        only works on the thread running the script.
+
+        Sections finish out of order, so results are placed by index rather
+        than appended.
+        """
+        sections = structure.sections
+        n = len(sections)
+        workers = max(1, min(settings.max_concurrent_sections, n))
+
+        results: list[Optional[str]] = [None] * n
+        durations: list[float] = [0.0] * n
+        completed = 0
+
+        logger.info(f"Writing {n} sections with {workers} concurrent workers")
+        wall_start = time.perf_counter()
+
+        def work(index: int) -> tuple[int, str, float]:
+            t0 = time.perf_counter()
+            content = self._build_section_content(
+                transcript, structure, sections[index]
+            )
+            return index, content, time.perf_counter() - t0
+
+        with ThreadPoolExecutor(
+            max_workers=workers, thread_name_prefix="notealchemy-section"
+        ) as pool:
+            futures = {pool.submit(work, i): i for i in range(n)}
+            try:
+                for future in as_completed(futures):
+                    index, content, elapsed = future.result()
+                    results[index] = content
+                    durations[index] = elapsed
+                    completed += 1
+                    logger.debug(
+                        f"Section '{sections[index].heading}' written "
+                        f"({len(content)} chars in {elapsed:.1f}s)"
+                    )
+                    # Progress reflects completion count, not position,
+                    # because sections do not finish in order.
+                    self._on_progress(
+                        completed + 1,
+                        total_steps,
+                        f"Wrote section {completed}/{n}: {sections[index].heading}",
+                    )
+            except Exception:
+                # Don't keep paying for work whose result we'll discard.
+                for pending in futures:
+                    pending.cancel()
+                raise
+
+        stats.sections_wall_time = time.perf_counter() - wall_start
+        stats.content_times = durations
+
+        missing = [i for i, r in enumerate(results) if r is None]
+        if missing:
+            raise CompletionError(
+                f"Section content missing for indices {missing}"
+            )
+
+        logger.info(
+            f"Sections done in {stats.sections_wall_time:.1f}s "
+            f"(sum of calls {sum(durations):.1f}s, "
+            f"{stats.sections_speedup:.1f}x speedup)"
+        )
+        return [
+            SectionContent(section=sections[i], content=results[i])  # type: ignore[arg-type]
+            for i in range(n)
+        ]
 
     def _build_structure(self, transcript: str) -> NotesStructure:
         raw = self._llm.complete_json(
