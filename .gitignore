@@ -30,6 +30,25 @@ logs/
 /assets/audio/*.mp3
 /assets/audio/*.wav
 
+# Generated notes / exports — app output, never commit these
+/*_notes.pdf
+/*_notes.txt
+/notes_output.*
+/generated_notes.md
+
+# Local media used for manual testing
+/*.mp4
+/*.mp3
+/*.m4a
+/*.wav
+
+# Test & tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
 # IDEs
 .vscode/
 .idea/
