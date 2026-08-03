@@ -39,7 +39,7 @@ def render_sidebar() -> dict:
         language         : str | None
     """
     with st.sidebar:
-        st.markdown("## 🧙 ScribeWizard")
+        st.markdown("## 🧙 NoteAlchemy")
         st.markdown(
             "<p style='color:#6a6258;font-size:0.78rem;"
             "font-family:JetBrains Mono,monospace;margin-top:-0.5rem;'>"
@@ -115,7 +115,7 @@ def render_sidebar() -> dict:
         st.markdown(
             f"<div style='font-family:JetBrains Mono,monospace;font-size:0.72rem;"
             f"color:#6a6258;line-height:1.9'>"
-            f"🎙️ Whisper-large-v3<br>"
+            f"🎙️ <span style='color:#c9933a'>{settings.whisper_model}</span><br>"
             f"🏗️ <span style='color:#c9933a'>{settings.structure_model.split('/')[-1]}</span><br>"
             f"✍️ <span style='color:#c9933a'>{settings.content_model.split('/')[-1]}</span>"
             f"</div>",
@@ -306,7 +306,7 @@ def render_welcome() -> None:
         <div class="welcome-placeholder">
             <span class="welcome-icon">🧙</span>
             Upload audio, paste a YouTube link, or drop in a transcript.<br>
-            Hit <strong style="color:#c9933a;">Generate Notes</strong> and ScribeWizard
+            Hit <strong style="color:#c9933a;">Generate Notes</strong> and NoteAlchemy
             will transcribe, structure, and write<br>
             comprehensive lecture notes — automatically.
         </div>
